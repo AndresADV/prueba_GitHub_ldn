@@ -1,0 +1,318 @@
+package beans;
+
+import entidades.FuncXModXProd;
+import entidades.ModXProd;
+import entidades.Pais;
+import entidades.Producto;
+import entidades.VersionWarXProducto;
+import java.math.BigDecimal;
+
+import java.util.List;
+import javax.ejb.Stateless;
+import javax.faces.model.SelectItem;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+import javax.validation.ConstraintViolationException;
+import org.primefaces.model.DefaultTreeNode;
+import org.primefaces.model.TreeNode;
+
+@Stateless
+public class ProductoFacade extends AbstractFacade<Producto> {
+
+    @PersistenceContext(unitName = "MatrizCertifiacionPU")
+    private EntityManager em;
+
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
+    }
+
+    public ProductoFacade() {
+        super(Producto.class);
+    }
+
+    public List<Producto> cargarDataTableP() {
+        EntityManager con = getEntityManager();
+        Query query = con.createNativeQuery("SELECT * FROM producto "
+                                          + "ORDER BY 1 ");
+        List<Object[]> listResults = query.getResultList();
+        List<Producto> listConsulta = query.getResultList();
+        listConsulta.clear();
+        for (Object[] record : listResults) {
+            Producto item = new Producto();
+            item.setProCodigo(new BigDecimal(record[0].toString()));
+            item.setProNombre(record[1] == null ? "" : record[1].toString());
+            listConsulta.add(item);
+        }
+        return listConsulta;
+    }
+
+    public BigDecimal obtenerCsc(String tabla, String columna) {
+        BigDecimal res;
+        EntityManager con = getEntityManager();
+        Query query = con.createNativeQuery("SELECT max(" + columna + ") FROM " + tabla);
+        try {
+            res = new BigDecimal(query.getSingleResult().toString());
+        } catch (Exception e) {
+            res = new BigDecimal(0);
+        }
+        return new BigDecimal(res.intValue() + 1);
+    }
+
+    public String createGen(Producto current) {
+        EntityManager con = getEntityManager();
+        String respuesta;
+        try {
+            con.persist(current);
+            respuesta = "El Ítem de Producto se ha creado satisfactoriamente!";
+        } catch (ConstraintViolationException e) {
+            respuesta = "Error! : Debe ingresar el campo Nombre";
+        } catch (Exception e) {
+            respuesta = "Error! --" + e;
+        }
+
+        return respuesta;
+    }
+
+    public List<VersionWarXProducto> findByProduct(BigDecimal proCodigo) {
+        if (proCodigo != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT csc_vwp, version_war "
+                    + "FROM VERSION_WAR_X_PRODUCTO "
+                    + "WHERE PRO_CODIGO = " + proCodigo + " "
+                    + "order by 1 DESC");
+            List<Object[]> listResults = query.getResultList();
+            List<VersionWarXProducto> listConsulta = query.getResultList();
+            listConsulta.clear();
+            for (Object[] record : listResults) {
+                VersionWarXProducto version = new VersionWarXProducto();
+                version.setCscVwp(new BigDecimal(record[0].toString()));
+                version.getVersionWar().setVersion(record[1] == null ? "" : record[1].toString());
+                listConsulta.add(version);
+            }
+            return listConsulta;
+        }
+        return null;
+    }
+
+    public SelectItem[] findByPais(BigDecimal codPais) {       
+          if (codPais != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT distinct p.pro_codigo, p.pro_nombre "
+                    + "FROM VERSION_WAR_X_PRODUCTO vwp, producto p "
+                    + "WHERE vwp.pro_codigo = p.pro_codigo "
+                    + "AND vwp.pais_codigo = " + codPais + " ORDER BY 2");
+            List<Object[]> listObjects = query.getResultList();
+            int size = listObjects.size() + 1;
+            SelectItem[] items = new SelectItem[size];
+            int i = 0;
+            items[0] = new SelectItem("", "----------");
+            i++;
+            for (Object[] record : listObjects) {
+                items[i++] = new SelectItem(record[0].toString(), record[1] == null ? "" : record[1].toString());
+            }
+            return items;
+        }
+        return null;
+    }
+      
+    
+
+    public SelectItem[] findByModXProduct(BigDecimal proCodigo) {
+        if (proCodigo != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT mp.mod_codigo, m.modulo_nombre "
+                    + "FROM MOD_X_PROD mp, modulos m "
+                    + "WHERE m.mod_codigo = mp.mod_codigo "
+                    + "AND PRO_CODIGO = " + proCodigo + " ORDER BY 2");
+            List<Object[]> listObjects = query.getResultList();
+            int size = listObjects.size() + 1;
+            SelectItem[] items = new SelectItem[size];
+            int i = 0;
+            items[0] = new SelectItem("", "----------");
+            i++;
+            for (Object[] record : listObjects) {
+                items[i++] = new SelectItem(record[0].toString(), record[1] == null ? "" : record[1].toString());
+            }
+            return items;
+        }
+        return null;
+    }
+
+    public SelectItem[] findByPaisPro(BigDecimal codPais, BigDecimal proCodigo) {
+        if (codPais != null && proCodigo != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT csc_vwp, version_war "
+                    + "FROM VERSION_WAR_X_PRODUCTO "
+                    + "WHERE PRO_CODIGO = " + proCodigo + " "
+                    + "AND PAIS_CODIGO = " + codPais + " ORDER BY 2 DESC");
+            List<Object[]> listObjects = query.getResultList();
+            int size = listObjects.size() + 1;
+            SelectItem[] items = new SelectItem[size];
+            int i = 0;
+            items[0] = new SelectItem("", "----------");
+            i++;
+            for (Object[] record : listObjects) {
+                items[i++] = new SelectItem(record[0].toString(), record[1] == null ? "" : record[1].toString());
+            }
+            return items;
+        }
+        return null;
+    }
+
+    public TreeNode createDocuments(BigDecimal codPais, BigDecimal proCodigo, BigDecimal verCodigo) {
+        TreeNode root = new DefaultTreeNode(new ConsultaFacade("Consulta", "-"), null);
+        TreeNode browser = new DefaultTreeNode(new ConsultaFacade("Navegadores", ""), root);
+        TreeNode bd = new DefaultTreeNode(new ConsultaFacade("Bases de Datos", ""), root);
+        TreeNode sa = new DefaultTreeNode(new ConsultaFacade("Servidores de Aplicaciones", ""), root);
+        TreeNode so = new DefaultTreeNode(new ConsultaFacade("Sistemas Operativos", ""), root);
+        TreeNode fo = new DefaultTreeNode(new ConsultaFacade("Formulación", ""), root);
+        EntityManager con = getEntityManager();
+
+
+        //NAVEGADORES
+        Query query = con.createNativeQuery("SELECT br.br_nombre, bv.br_version "
+                + "FROM browser br, "
+                + "browser_x_version bv, "
+                + "war_x_browser wv, "
+                + "VERSION_WAR_X_PRODUCTO vwp "
+                + "WHERE br.br_codigo = bv.br_codigo "
+                + "AND wv.csc_brxver = bv.csc_brxver "
+                + "AND vwp.csc_vwp =  wv.csc_vwp "
+                + "AND vwp.pais_codigo = " + codPais+ " "
+                + "AND vwp.pro_codigo = " + proCodigo + " "
+                + "AND wv.csc_vwp = " + verCodigo + " ORDER BY 1,2");
+        List<Object[]> listResults = query.getResultList();
+        DefaultTreeNode defaultTreeNode;
+        for (Object[] record : listResults) {
+            defaultTreeNode = new DefaultTreeNode(new ConsultaFacade(record[0] == null ? "" : record[0].toString(), record[1] == null ? "" : record[1].toString()), browser);
+        }
+        defaultTreeNode = new DefaultTreeNode(new ConsultaFacade("", ""), browser);
+        listResults.clear();
+
+        //BD
+        query = con.createNativeQuery("SELECT bd.bd_nombre, bdv.bd_version "
+                + "FROM motor_bd bd, "
+                + "bd_x_version bdv, "
+                + "version_bd_x_prod vbdp, "
+                + "version_apl_x_war vaw ,"
+                + "version_war_x_producto vwp "
+                + "WHERE bd.bd_codigo = bdv.bd_codigo "
+                + "AND bdv.csc_bdxversion = vbdp.csc_bdxversion "
+                + "AND vbdp.csc_vbdp = vaw.csc_vbdp "
+                + "AND vaw.csc_vwp =  vwp.csc_vwp "
+                + "AND vwp.pais_codigo = " + codPais+ " "
+                + "AND vwp.pro_codigo = " + proCodigo + " "
+                + "AND vaw.csc_vwp = " + verCodigo + " ORDER BY 1, 2");
+        listResults = query.getResultList();
+        for (Object[] record : listResults) {
+            defaultTreeNode = new DefaultTreeNode(new ConsultaFacade(record[0] == null ? "" : record[0].toString(), record[1] == null ? "" : record[1].toString()), bd);
+        }
+        defaultTreeNode = new DefaultTreeNode(new ConsultaFacade("", ""), bd);
+        listResults.clear();
+
+        //SA
+        query = con.createNativeQuery("SELECT distinct sa.sa_nombre, sav.sa_version "
+                + "FROM  servidor_apl sa,  "
+                + "sa_x_version sav,  "
+                + "sapl_x_so saso, "
+                + "sa_war_x_pro sapw, "
+                + "version_war_x_producto vwp "
+                + "WHERE sa.sa_codigo = sav.sa_codigo "
+                + "AND sav.csc_sa_version = saso.csc_sa_version "
+                + "AND saso.csc_saso = sapw.csc_saso "
+                + "AND sapw.csc_vwp =  vwp.csc_vwp "
+                + "AND vwp.pais_codigo = " + codPais+ " "
+                + "AND vwp.pro_codigo = " + proCodigo + " "
+                + "AND sapw.csc_vwp = " + verCodigo + " ORDER BY 1, 2");
+        listResults = query.getResultList();
+        for (Object[] record : listResults) {
+            defaultTreeNode = new DefaultTreeNode(new ConsultaFacade(record[0] == null ? "" : record[0].toString(), record[1] == null ? "" : record[1].toString()), sa);
+        }
+        defaultTreeNode = new DefaultTreeNode(new ConsultaFacade("", ""), sa);
+        listResults.clear();
+
+        //SO
+        query = con.createNativeQuery("SELECT distinct so.so_nombre, sov.so_version "
+                + "FROM sistemas_operativos so, "
+                + "so_x_version sov, "
+                + "sapl_x_so saso, "
+                + "sa_war_x_pro sapw, "
+                + "version_war_x_producto vwp "
+                + "WHERE so.so_codigo = sov.so_codigo "
+                + "AND sov.csc_so_version = saso.csc_so_version "
+                + "AND saso.csc_saso = sapw.csc_saso "
+                + "AND sapw.csc_vwp =  vwp.csc_vwp "
+                + "AND vwp.pais_codigo = " + codPais+ " "
+                + "AND vwp.pro_codigo = " + proCodigo + " "
+                + "AND sapw.csc_vwp = " + verCodigo + " ORDER BY 1, 2");
+        listResults = query.getResultList();
+        for (Object[] record : listResults) {
+            defaultTreeNode = new DefaultTreeNode(new ConsultaFacade(record[0] == null ? "" : record[0].toString(), record[1] == null ? "" : record[1].toString()), so);
+        }
+        defaultTreeNode = new DefaultTreeNode(new ConsultaFacade("", ""), so);
+        listResults.clear();
+        
+        //FO
+    query = con.createNativeQuery("SELECT FO.DESC_FORMULACION,VW.VERSION_WAR"+" "
+        +"FROM TRH_FORMULACION FO,"
+        +"TRH_FORMULACION_X_WAR DE,"+" "
+        +"version_war_x_producto  VW"+" "
+        +"WHERE  FO.CSC_FORMULACION = DE.CSC_FORMULACION" +" "
+        +"AND    DE.CSC_VWP = VW.CSC_VWP"+" "
+        +"AND   VW.PRO_CODIGO =" + proCodigo + " "
+        +"AND    VW.PAIS_CODIGO =" + codPais+ " "
+        +"AND   VW.CSC_VWP =  " + verCodigo+" " );
+        listResults = query.getResultList();
+        for (Object[] record : listResults) {
+            defaultTreeNode = new DefaultTreeNode(new ConsultaFacade(record[0] == null ? "" : record[0].toString(), record[1] == null ? "" : record[1].toString()), fo);
+        }
+        defaultTreeNode = new DefaultTreeNode(new ConsultaFacade("", ""),fo);
+        listResults.clear();
+
+        return root;
+    }
+
+    public List<VersionWarXProducto> cargarDataTable(BigDecimal proCodigo) {
+        if (proCodigo != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT csc_vwp, version_war FROM VERSION_WAR_X_PRODUCTO WHERE PRO_CODIGO = " + proCodigo);
+            List<Object[]> listResults = query.getResultList();
+            List<VersionWarXProducto> listConsulta = query.getResultList();
+            listConsulta.clear();
+            for (Object[] record : listResults) {
+                VersionWarXProducto version = new VersionWarXProducto();
+                version.setCscVwp(new BigDecimal(record[0].toString()));
+                version.getVersionWar().setVersion(record[1] == null ? "" : record[1].toString());
+                listConsulta.add(version);
+            }
+            return listConsulta;
+        }
+        return null;
+    }
+
+    public List<FuncXModXProd> cargarDataTable1(BigDecimal csc_modxpro) {
+
+
+
+        if (csc_modxpro != null) {
+            EntityManager con = getEntityManager();
+            Query query = con.createNativeQuery("SELECT DESCRIPCION, LINK_VIDEO FROM FUNC_X_MOD_X_PROD WHERE csc_modxpro = " + csc_modxpro);
+            List<Object[]> listResults = query.getResultList();
+            List<FuncXModXProd> listConsulta = query.getResultList();
+            listConsulta.clear();
+            for (Object[] record : listResults) {
+                FuncXModXProd version = new FuncXModXProd();
+                version.setDescripcion(record[2] == null ? "" : record[1].toString());
+                version.setLinkVideo(record[1] == null ? "" : record[1].toString());
+                // version.getFuncXModXProdPK().setCscFunc(record[0]==null? "":record[0].toString());
+                //version.setCscVwp(new BigDecimal(record[0].toString()));
+                //version.getVersionWar().setVersion(record[1]==null? "":record[1].toString());
+                listConsulta.add(version);
+            }
+            return listConsulta;
+        }
+        return null;
+    }
+}
