@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core">
+    <h:head>
+        <title>Hibernate Q71CONSTR</title>
+    </h:head> 
+    <h:body>
+        <h:form id="form1">
+            <center>
+                <p:fieldset legend="Crear">
+                    <p:panelGrid columns="8">                
+                        <h:outputText value="Codigo"/>
+                        <p:inputText  value="#{act.actividadId.actividadCodigo}" autocomplete="off" required="true" />
+                        <h:outputText value="Tipo  "/>
+                        <p:inputText  value="#{act.actividadId.actividadTipo}" autocomplete="off" required="true" />
+                        <h:outputText value="Nombre  "/>
+                        <p:inputText  value="#{act.actividad.actividadNombre}" autocomplete="off" required="true" />
+                        <p:commandButton value="Guardar"
+                                         actionListener="#{act.Guardar()}"
+                                         update=":form1, :form2 "
+                                         icon="ui-icon-disk"/>
+                    </p:panelGrid>
+                </p:fieldset>
+            </center>
+        </h:form>
+        <br/>
+        <h:form id="form2">
+            <p:dataTable editable="true" value="#{act.actividades}" var="a">
+                <p:column style="width: 5%; text-align:  center">
+                    <f:facet name="header"></f:facet>
+                    <p:selectBooleanCheckbox value="#{a.selected}"/>
+                </p:column>
+                <p:column>
+                    <f:facet name="header"> Nombre </f:facet>
+                    <h:outputText value="#{a.id.actividadCodigo}"/>
+                </p:column>
+                <p:column>
+                    <f:facet name="header"> Nombre </f:facet>
+                    <h:outputText value="#{a.id.actividadTipo}"/>
+                </p:column>
+                <p:column>
+                    <f:facet name="header"> Nombre </f:facet>
+                    <h:outputText value="#{a.actividadNombre}"/>
+                </p:column>
+            </p:dataTable> 
+            <center>
+                <br/>
+                <p:commandButton value="Eliminar"
+                                 actionListener="#{act.Eliminar()}"
+                                 update="form2"
+                                 icon="ui-icon-trash">
+                </p:commandButton>
+            </center>
+        </h:form>
+    </h:body>
+</html>
+
+
